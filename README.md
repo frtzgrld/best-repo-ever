@@ -1,1 +1,1 @@
-# best-repo-ever 2026
+# best-repo-ever 2026 merge conflict
