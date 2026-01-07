@@ -1,0 +1,53 @@
+
+name: PR Policy
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches:
+      - main
+      - staging
+      - dev
+      - '**'  # apply to all, we’ll validate in the job
+
+jobs:
+  enforce-pr-target:
+    name: Enforce PR base branch is "dev"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if PR does not target "dev"
+        run: |
+          echo "PR base: ${{ github.event.pull_request.base.ref }}"
+          if [ "${{ github.event.pull_request.base.ref }}" != "dev" ]; then
+            echo "::error ::Pull Requests must target the 'dev' branch."
+            echo "Please retarget your PR to 'dev'."
+            exit 1
+          fi
+
+  enforce-feature-source:
+    name: Enforce source branch is a feature branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if source is main/staging/dev
+        run: |
+          SRC="${{ github.event.pull_request.head.ref }}"
+          echo "PR source: $SRC"
+          if [ "$SRC" = "main" ] || [ "$SRC" = "staging" ] || [ "$SRC" = "dev" ]; then
+            echo "::error ::PR source cannot be a protected branch (main, staging, dev)."
+            echo "Create a feature branch off 'main' and open the PR from that branch to 'dev'."
+            exit 1
+          fi
+
+  optional-labeling:
+    name: Auto-label feature PRs (optional)
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add 'feature' label if targeting dev
+        if: ${{ github.event.pull_request.base.ref == 'dev' }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: |
+            feature
